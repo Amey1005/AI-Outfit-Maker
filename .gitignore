@@ -4,7 +4,7 @@ __pycache__/
 .ruff_cache/
 node_modules/
 frontend/dist/
-data/
+/data/
 backend/media/
 backend/*.db
 ml/checkpoints/*.pt
