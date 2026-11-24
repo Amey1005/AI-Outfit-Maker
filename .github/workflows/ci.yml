@@ -34,3 +34,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -f backend/Dockerfile -t outfit-api .
       - run: docker build -t outfit-web frontend
+      - name: Build the Hugging Face Space image (website + API in one container)
+        run: docker build -f deploy/space/Dockerfile -t outfit-space .

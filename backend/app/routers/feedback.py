@@ -1,4 +1,3 @@
-import shutil
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +5,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import Feedback, Item, User, WearEvent, get_db
 from app.routers.common import current_user, matrix_cache
 from app.services.personalization import to_vec, update_pref
@@ -52,7 +50,9 @@ def post_wear(body: WearIn, user: User = Depends(current_user), db: Session = De
 @router.delete("/users/me/data", status_code=204)
 def delete_my_data(user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Privacy: removes the user row, every item, feedback and wear event, and the stored photos."""
-    shutil.rmtree(settings.media_dir / user.id, ignore_errors=True)
+    from app.services import storage
+
+    storage.delete_user(db, user.id)
     for m in (Feedback, WearEvent):
         for row in db.scalars(select(m).where(m.user_id == user.id)):
             db.delete(row)

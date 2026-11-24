@@ -60,6 +60,14 @@ class WearEvent(Base):
     worn_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class ImageBlob(Base):
+    """A stored photo when MEDIA_STORE=db."""
+    __tablename__ = "image_blobs"
+    path: Mapped[str] = mapped_column(String(255), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+
+
 def init_db():
     Base.metadata.create_all(engine)
     # Databases created before the `wear` column existed get it added in place (existing items become unisex).

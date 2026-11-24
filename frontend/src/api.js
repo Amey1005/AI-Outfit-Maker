@@ -1,4 +1,5 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Empty string = the API is on the same address as the website (the deployed single-URL setup).
+export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // Simple identity: a UUID generated on first visit, sent as X-User-Id. There is no login.
 export function userId() {

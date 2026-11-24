@@ -1,5 +1,4 @@
 import uuid
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
@@ -36,13 +35,12 @@ async def upload_item(request: Request, file: UploadFile = File(...), type: str 
         raise HTTPException(400, str(e)) from None
     except Exception:
         raise HTTPException(400, "could not read that file as an image") from None
-    folder = settings.media_dir / user.id
-    folder.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}.jpg"
+    from app.services import storage
     from app.services.imaging import cutout_name, load_image
 
-    load_image(data).save(folder / name, quality=90)                    # original, kept for re-processing
-    tags["display"].save(folder / cutout_name(name), quality=90)        # what the app shows
+    storage.save(db, f"{user.id}/{name}", storage.jpeg_bytes(load_image(data)))   # original, kept for re-processing
+    storage.save(db, f"{user.id}/{cutout_name(name)}", storage.jpeg_bytes(tags["display"]))  # what the app shows
     item = Item(user_id=user.id, image_path=f"{user.id}/{cutout_name(name)}", fine_type=tags["fine_type"],
                 coarse_type=tags["coarse_type"], colors=tags["colors"], pattern=tags["pattern"],
                 material=tags["material"], type_confidence=tags["type_confidence"], wear=wear,
@@ -92,10 +90,11 @@ def delete_item(item_id: int, user: User = Depends(current_user), db: Session = 
     item = db.get(Item, item_id)
     if item is None or item.user_id != user.id:
         raise HTTPException(404, "item not found")
+    from app.services import storage
     from app.services.imaging import original_name
 
-    (Path(settings.media_dir) / item.image_path).unlink(missing_ok=True)
-    (Path(settings.media_dir) / original_name(item.image_path)).unlink(missing_ok=True)
+    storage.delete(db, item.image_path)
+    storage.delete(db, original_name(item.image_path))
     db.delete(item)
     db.commit()
 

@@ -4,13 +4,15 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 
 import numpy as np
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db import init_db
+from app.db import get_db, init_db
 from app.routers import feedback, outfits, wardrobe
+from app.services import storage
 from app.services.embedding import get_backend
 from app.services.recommender import load_scorer
 
@@ -31,8 +33,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Outfit Maker", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
-settings.media_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
+
+
+@app.get("/media/{path:path}", include_in_schema=False)
+def media(path: str, db: Session = Depends(get_db)):
+    """Photos, from disk or from the database depending on MEDIA_STORE. File names are random, so they can be cached."""
+    data = storage.load(db, path)
+    if data is None:
+        raise HTTPException(404, "not found")
+    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @app.middleware("http")
@@ -61,3 +70,7 @@ def latency_metrics():
 app.include_router(wardrobe.router)
 app.include_router(outfits.router)
 app.include_router(feedback.router)
+
+# Serve the built website from the same address (one link for a deployment). Mounted last so API routes win.
+if settings.frontend_dir and (settings.frontend_dir / "index.html").exists():
+    app.mount("/", StaticFiles(directory=settings.frontend_dir, html=True), name="frontend")

@@ -1,37 +1,43 @@
 # Deploying
 
-## Shape of the deployment
+## Recommended: one free Hugging Face Space (website + API at one address)
 
-* **Frontend** -> Vercel: import the repo, set root directory `frontend/`, env var `VITE_API_URL=https://<your-api-host>`.
-* **Backend** -> Render / Railway / Hugging Face Space (Docker), built from `backend/Dockerfile` with the **repo root as build context** (`docker build -f backend/Dockerfile .`). Set env vars:
-  * `DATABASE_URL` - hosted Postgres (Neon, or the platform's own; check current free-tier limits)
-  * `CORS_ORIGINS` - your Vercel URL
-  * `COMPAT_CHECKPOINT` - path of the trained checkpoint (see below)
-  * `EMBED_BACKEND=fashionclip`
-* The platform provides `PORT`; the container honours it.
+Free web hosts usually give ~512 MB of memory; FashionCLIP + PyTorch need several GB. A free Hugging Face Space
+(Docker, CPU basic: 2 vCPU, 16 GB RAM) fits, and serves the built website from the same container as the API, so
+there is one public link and no CORS setup.
 
-## Memory warning
+1. Put the trained checkpoint at `ml/checkpoints/compat.pt` (it is not in git; download it from Google Drive).
+2. Create a Hugging Face token with **Write** access (huggingface.co -> Settings -> Access Tokens) and log in:
+   `hf auth login`
+3. From the repo root: `python deploy/push_space.py --dry-run` (shows what will be uploaded), then
+   `python deploy/push_space.py`.
+4. Watch the build at `https://huggingface.co/spaces/<you>/outfit-maker` (about 10-15 minutes the first time).
+   The app is then at `https://<you>-outfit-maker.hf.space`.
 
-Free backend tiers often give ~512 MB RAM. FashionCLIP + PyTorch + rembg may not fit. Options, cheapest first:
+What the Space image does (`deploy/space/Dockerfile`):
+* builds the React app with an empty `VITE_API_URL`, so it calls the API on its own address;
+* installs CPU-only PyTorch and downloads FashionCLIP and the `u2netp` background model at build time, so a restart
+  is quick;
+* stores photos **in the database** (`MEDIA_STORE=db`), because a Space's disk is wiped on restart;
+* uses SQLite in the container by default.
 
-1. Use the `u2netp` background model (already the default) or set `USE_REMBG=0` to use the lightweight border-mask fallback.
-2. Host the backend as a Hugging Face Space (Docker) - more RAM on the free CPU tier.
-3. Run a smaller demo mode (`EMBED_BACKEND=lite`) and say so clearly in the README, plus a recorded demo GIF of the full version.
+### Keeping data across restarts
 
-Free instances sleep; the first request after idle is slow - say so in the README.
+With the default SQLite database, wardrobes are lost whenever the Space restarts (after a rebuild or a long sleep).
+To keep them, create a free Postgres database (for example on neon.tech), copy its connection string, and add it in
+the Space -> Settings -> **Variables and secrets** -> New secret, named `DATABASE_URL`. Photos are stored in that
+database too.
 
-## Model files
+### Notes
 
-Do not commit weights. FashionCLIP downloads from Hugging Face at startup. Host the small trained checkpoint (`compat.pt`, a few MB) on the Hugging Face Hub or commit it to `ml/checkpoints/` (it is git-ignored by default; remove the ignore line to ship it) so the Dockerfile's `COPY ml ml` includes it.
+* A free Space sleeps after a period without visitors; the first visit after that takes about a minute.
+* The checkpoint is uploaded to the Space with the code (about 20 MB); your local photos and database are not.
+* `.github/workflows/ci.yml` builds the Space image on every push, so a broken Dockerfile shows up on GitHub first.
 
-## Media storage
+## Alternative: separate frontend and backend
 
-Uploaded photos are written to `MEDIA_DIR`. Most free tiers have ephemeral disks, so photos disappear on redeploy - fine for a demo, but mention it. For persistence, mount a volume (as `docker-compose.yml` does) or move storage to object storage.
-
-## Checklist
-
-- [ ] `docker compose up --build` works locally
-- [ ] CI green on GitHub (`.github/workflows/ci.yml`)
-- [ ] Frontend deployed and pointing at the backend
-- [ ] Checkpoint present: `POST /outfits/suggest` response says `"scorer": "compatibility_model"`
-- [ ] README has the live link, demo GIF (ScreenToGif) and architecture diagram (excalidraw / draw.io)
+* **Frontend** on Vercel: import the repo, root directory `frontend/`, env var `VITE_API_URL=https://<your-api-host>`.
+* **Backend** from `backend/Dockerfile` (repo root as build context) on any host with enough memory. Set
+  `DATABASE_URL`, `CORS_ORIGINS` (your Vercel URL), `MEDIA_STORE=db` if its disk is not persistent, and
+  `COMPAT_CHECKPOINT`.
+* Do not commit model weights. FashionCLIP downloads from Hugging Face; ship the small checkpoint with the image.

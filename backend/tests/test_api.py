@@ -261,3 +261,27 @@ def test_upload_keeps_original_and_shows_a_cutout(client, user):
         assert im.size == (640, 640) and im.getpixel((5, 5)) == (255, 255, 255)   # background removed to white
     assert client.delete(f"/wardrobe/items/{item['id']}", headers=user).status_code == 204
     assert not shown.exists() and not original.exists()
+
+
+def test_photos_can_live_in_the_database(client, user, monkeypatch):
+    """MEDIA_STORE=db (used on hosts whose disk is wiped on restart): nothing is written to disk."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "media_store", "db")
+    item = client.post("/wardrobe/items", headers=user, files={"file": ("x.png", png("shirt", "blue"), "image/png")},
+                       data={"type": "shirt"}).json()
+    assert not (settings.media_dir / item["image_url"].removeprefix("/media/")).exists()
+    r = client.get(item["image_url"])
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg" and r.content[:2] == b"\xff\xd8"
+    assert client.delete(f"/wardrobe/items/{item['id']}", headers=user).status_code == 204
+    assert client.get(item["image_url"]).status_code == 404
+
+    item = client.post("/wardrobe/items", headers=user, files={"file": ("x.png", png("shirt", "blue"), "image/png")},
+                       data={"type": "shirt"}).json()
+    assert client.delete("/users/me/data", headers=user).status_code == 204
+    assert client.get(item["image_url"]).status_code == 404
+
+
+def test_media_route_refuses_paths_outside_the_media_folder(client):
+    assert client.get("/media/../../app/config.py").status_code == 404
+    assert client.get("/media/%2e%2e/%2e%2e/app/config.py").status_code == 404

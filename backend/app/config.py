@@ -20,6 +20,11 @@ class Settings:
         self.cors_origins = [o for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o]
         self.max_upload_bytes = int(os.getenv("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))
         self.use_rembg = os.getenv("USE_REMBG", "1") == "1"
+        # "disk" or "db": where uploaded photos are kept (see app/services/storage.py)
+        self.media_store = os.getenv("MEDIA_STORE", "disk")
+        # a built frontend (frontend/dist) to serve from the same address as the API, if present
+        frontend = os.getenv("FRONTEND_DIR", "")
+        self.frontend_dir = Path(frontend) if frontend else None
 
 
 settings = Settings()
