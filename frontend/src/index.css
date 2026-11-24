@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Tomato & Cream palette. The font family and type scale are Tailwind's defaults, unchanged. */
+@theme {
+  --color-cream: #f9f5ef;
+  --color-tomato: #e64b35;
+  --color-charcoal: #292725;
+  --color-peach: #f2c7b5;
+  --color-warmgrey: #e9e3dc;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+  }
+  ::selection {
+    background-color: var(--color-peach);
+  }
+  select,
+  input {
+    accent-color: var(--color-tomato);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply rounded-full bg-tomato px-5 py-2 text-sm font-medium text-white transition duration-200 hover:bg-tomato/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply rounded-full bg-white px-4 py-1.5 text-sm font-medium text-charcoal ring-1 ring-charcoal/15 transition duration-200 hover:ring-charcoal active:scale-[0.97];
+  }
+  .chip {
+    @apply rounded-full px-4 py-1.5 text-sm font-medium capitalize transition duration-200 active:scale-[0.97];
+  }
+  .chip-on {
+    @apply bg-tomato text-white;
+  }
+  .chip-off {
+    @apply bg-white text-charcoal ring-1 ring-charcoal/15 hover:ring-charcoal;
+  }
+  .field {
+    @apply rounded-lg bg-white px-2.5 py-1.5 text-sm text-charcoal ring-1 ring-warmgrey outline-none transition focus:ring-2 focus:ring-tomato;
+  }
+  .card {
+    @apply overflow-hidden rounded-2xl bg-white ring-1 ring-warmgrey transition duration-300;
+  }
+  .card-hover {
+    @apply hover:-translate-y-0.5 hover:ring-peach;
+  }
+  .photo {
+    @apply aspect-square w-full object-cover transition duration-500 group-hover:scale-[1.04];
+  }
+  .note {
+    @apply rounded-xl bg-peach/40 p-3 text-sm text-charcoal ring-1 ring-peach;
+  }
+  .error {
+    @apply rounded-xl bg-tomato/10 p-3 text-sm text-tomato ring-1 ring-tomato/30;
+  }
+  .badge {
+    @apply rounded-full bg-cream px-2 py-0.5 text-[11px] font-medium text-charcoal/70 ring-1 ring-warmgrey;
+  }
+  .link {
+    @apply font-medium text-tomato underline decoration-tomato/40 underline-offset-2 transition hover:decoration-tomato;
+  }
+}

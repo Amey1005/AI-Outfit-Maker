@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
+data/
+backend/media/
+backend/*.db
+ml/checkpoints/*.pt
+.env
+.venv/
+
+# local backups made by the maintenance scripts
+backend/*.backup-*.db

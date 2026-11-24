@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["frontend", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E741", "B008", "E501", "E701", "E702", "B905"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "ml"]
+
+[tool.pytest.ini_options]
+testpaths = ["ml/tests", "backend/tests"]
