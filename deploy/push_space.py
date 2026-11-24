@@ -56,7 +56,9 @@ def assemble(out: Path, github: str) -> list[Path]:
     ck = ROOT / "ml" / "checkpoints" / "compat.pt"
     (out / "ml" / "checkpoints").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ck, out / "ml" / "checkpoints" / "compat.pt")
-    shutil.copy2(ROOT / "deploy" / "space" / "Dockerfile", out / "Dockerfile")
+    # Unix line endings: a Windows checkout may hold CRLF, which breaks multi-line RUN commands
+    dockerfile = (ROOT / "deploy" / "space" / "Dockerfile").read_bytes().replace(b"\r\n", b"\n")
+    (out / "Dockerfile").write_bytes(dockerfile)
     (out / "README.md").write_text(SPACE_README.format(github=github), encoding="utf8")
     return sorted(p for p in out.rglob("*") if p.is_file())
 
